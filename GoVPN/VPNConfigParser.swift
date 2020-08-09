@@ -23,9 +23,14 @@ struct Config: Decodable {
 
 struct Payload: Decodable {
     let userDefinedName: String
+    let IKEv2: IKEv2Dict
     
     func name() -> String {
         return userDefinedName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    func username() -> String {
+        return IKEv2.authName.trimmingCharacters(in: .whitespacesAndNewlines)
     }
     
     func selected() -> Bool {
@@ -34,6 +39,14 @@ struct Payload: Decodable {
     
     private enum CodingKeys: String, CodingKey {
         case userDefinedName = "UserDefinedName"
+        case IKEv2 = "IKEv2"
+    }
+}
+
+struct IKEv2Dict: Decodable {
+    let authName: String
+    private enum CodingKeys: String, CodingKey {
+        case authName = "AuthName"
     }
 }
 
@@ -51,7 +64,7 @@ class VPNConfigParser {
                 let config = try! decoder.decode(Config.self, from: data)
                 
                 return config.payloadContent.map { payload in
-                    VPN(name: payload.name(), enabled: payload.selected())
+                    VPN(name: payload.name(), username: payload.username(), enabled: payload.selected())
                 }.filter { vpn in
                     vpn.enabled
                 }

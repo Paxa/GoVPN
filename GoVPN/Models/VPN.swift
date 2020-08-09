@@ -14,9 +14,11 @@ class VPN: NSObject, Codable {
     @objc var name: String
     @objc var enabled: Bool
     @objc var group: String?
+    @objc var username: String
     
-    init(name: String, enabled: Bool, group: String? = nil) {
+    init(name: String, username: String, enabled: Bool, group: String? = nil) {
         self.name = name
+        self.username = username
         self.enabled = enabled
         self.group = group
     }

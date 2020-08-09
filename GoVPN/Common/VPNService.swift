@@ -38,6 +38,10 @@ class VPNService {
         // Setup the callbacks
         self.setupEventCallback()
         self.refreshSession()
+
+//        let vpnManager = NEVPNManager.shared()
+//        vpnManager.loadFromPreferences(completionHandler: <#T##(Error?) -> Void#>)
+//        vpnManager.connection.status
     }
     
     func name() -> String {

@@ -46,8 +46,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 {
                     vpnService.disconnect()
                 } else {
+                    if KeychainHelper.hasPassword(vpn: vpn) {
+                        if let otp = getOtp() {
+                            if KeychainHelper.updatePassword(vpn: vpn, newOtp: otp) {
+                                let vpnService = VPNServicesManager.shared.service(named: vpn.name)!
+                                vpnService.connect()
+                                return
+                            }
+                        }
+                    }
                     connectToVPN(vpnName: vpn.name)
-                }                
+                }
             }
         }
     }
@@ -60,10 +69,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
         }
     }
-    
-    func connectToVPN(vpnName: String) {
-        os_log("connectToVPN %s", type: .info, vpnName)
 
+    func getOtp() -> String? {
         let mimierPath = "/usr/local/bin/mimier"
         if !FileManager.default.fileExists(atPath: mimierPath) {
             let alert = NSAlert.init()
@@ -76,36 +83,44 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 let url = URL(string: "https://github.com/gowtham-sai/mimier")!
                 NSWorkspace.shared.open(url)
             }
-            return
+            return nil
         }
-
+        
         let otp = Shell.execute(launchPath: mimierPath, arguments: ["get", "gojek"])
         let otpInt = Int(otp.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
-
-
+        
+        
         if otpInt < 100 {
             let alert = NSAlert.init()
             alert.messageText = "mimier not configured"
             alert.informativeText = "command: /usr/local/bin/mimier get gojek \n\nresult \n\(otp)"
             alert.addButton(withTitle: "OK")
             alert.runModal()
-            return
+            return nil
         }
-
-        os_log("Otp is %d", type: .info, otp)
-
-        let script = ScriptGenerator.generateScript(name: "ConnectVPN",
-                                                    variables: ["$vpn_otp": otp, "$osx_vpn_name": "\(vpnName), Not Connected"])
-
-        os_log("connected")
         
-        if let script = NSAppleScript(source: script) {
-            var error: NSDictionary?
-            let output: NSAppleEventDescriptor = script.executeAndReturnError(&error)
-            if let error = error {
-                os_log("error: %@", type: .error, error)
-            } else {
-                os_log("ouput %s", type: .info, output.stringValue ?? "unknown")
+        os_log("Otp is %s", type: .info, otp)
+
+        return otp
+    }
+    
+    func connectToVPN(vpnName: String) {
+        os_log("connectToVPN %s", type: .info, vpnName)
+
+        if let otp = getOtp() {
+            let script = ScriptGenerator.generateScript(name: "ConnectVPN",
+                                                        variables: ["$vpn_otp": otp, "$osx_vpn_name": "\(vpnName), Not Connected"])
+
+            os_log("connected")
+            
+            if let script = NSAppleScript(source: script) {
+                var error: NSDictionary?
+                let output: NSAppleEventDescriptor = script.executeAndReturnError(&error)
+                if let error = error {
+                    os_log("error: %@", type: .error, error)
+                } else {
+                    os_log("ouput %s", type: .info, output.stringValue ?? "unknown")
+                }
             }
         }
     }
